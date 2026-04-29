@@ -26,4 +26,4 @@ class CurrentUser(BaseModel):
     """Usuario autenticado disponible dentro de endpoints protegidos."""
 
     username: str
-    role: str = "member"
+    role: str = "citizen"  # "citizen" o "admin"

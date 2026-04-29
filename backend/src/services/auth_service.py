@@ -11,6 +11,8 @@ def authenticate_demo_user(username: str, password: str) -> dict | None:
     """Valida credenciales contra valores mock definidos en la configuración."""
 
     # Este bloque simula validación de credenciales. En producción se reemplaza por JWT/OIDC.
+    
+    # Usuario administrador
     if (
         username == settings.mock_auth_username
         and password == settings.mock_auth_password
@@ -20,6 +22,15 @@ def authenticate_demo_user(username: str, password: str) -> dict | None:
             "token_type": "bearer",
             "expires_in": settings.access_token_expire_minutes * 60,
         }
+    
+    # Usuario ciudadano (para demostración)
+    if username == "citizen_user" and password == "citizen_pass":
+        return {
+            "access_token": "citizen-demo-token",
+            "token_type": "bearer",
+            "expires_in": settings.access_token_expire_minutes * 60,
+        }
+    
     return None
 
 
@@ -30,9 +41,15 @@ def decode_demo_token(token: str) -> dict | None:
     """
 
     # En producción se validan firma, expiración, audiencia y claims.
-    if token != settings.mock_auth_token:
-        return None
-    return {
-        "username": settings.mock_auth_username,
-        "role": "member",
-    }
+    if token == settings.mock_auth_token:
+        return {
+            "username": settings.mock_auth_username,
+            "role": "admin",
+        }
+    elif token == "citizen-demo-token":
+        return {
+            "username": "citizen_user",
+            "role": "citizen",
+        }
+    
+    return None

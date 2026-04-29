@@ -16,6 +16,8 @@ from src.models.errors import AuthenticationError, ErrorResponse
 from src.routers.auth_router import auth_router
 from src.routers.health_router import health_router
 from src.routers.items_router import items_router
+from src.routers.admin_router import admin_router
+from src.routers.citizen_router import citizen_router
 
 logging.basicConfig(level=settings.log_level)
 logger = logging.getLogger(__name__)
@@ -82,6 +84,8 @@ async def generic_exception_handler(request: Request, exc: Exception) -> JSONRes
 app.include_router(health_router, prefix=settings.api_prefix)
 app.include_router(auth_router, prefix=settings.api_prefix)
 app.include_router(items_router, prefix=settings.api_prefix)
+app.include_router(admin_router, prefix=settings.api_prefix)
+app.include_router(citizen_router, prefix=settings.api_prefix)
 
 
 if __name__ == "__main__":
