@@ -6,27 +6,36 @@ Ejemplo de uso: mostrar cómo se testean endpoints públicos y protegidos.
 
 
 def test_login_returns_token_for_valid_credentials(client):
-    """El login mock debe devolver un bearer token cuando las credenciales son correctas."""
+    """El login debe devolver un bearer token JWT cuando las credenciales son correctas."""
 
     response = client.post(
         "/api/v1/auth/login",
-        json={"username": "api_user", "password": "change_me"},
+        json={"username": "empleado_admin", "password": "change_me"},
     )
 
     assert response.status_code == 200
-    assert response.json()["token_type"] == "bearer"
+    data = response.json()
+    assert data["token_type"] == "bearer"
+    assert "access_token" in data
 
 
 def test_protected_endpoint_requires_valid_token(client):
-    """Un endpoint protegido debe funcionar con el token mock correcto."""
+    """Un endpoint protegido debe funcionar con un JWT real válido."""
+
+    # Primero obtenemos un token real haciendo login
+    login_resp = client.post(
+        "/api/v1/auth/login",
+        json={"username": "empleado_admin", "password": "change_me"},
+    )
+    token = login_resp.json()["access_token"]
 
     response = client.get(
         "/api/v1/auth/me",
-        headers={"Authorization": "Bearer bootstrap-token"},
+        headers={"Authorization": f"Bearer {token}"},
     )
 
     assert response.status_code == 200
-    assert response.json()["username"] == "api_user"
+    assert response.json()["username"] == "empleado_admin"
 
 
 def test_protected_endpoint_rejects_invalid_token(client):

@@ -85,8 +85,6 @@ async def test_admin_can_review_ticket(async_client, admin_token):
 
     # Revisar como admin (Ajustado a los nuevos atributos prediccion_*)
     review_payload = {
-        "urgency": 4,
-        "category": "limpieza",
         "status": "resolved",
         "notes": "Confirmado in situ.",
     }
@@ -97,9 +95,9 @@ async def test_admin_can_review_ticket(async_client, admin_token):
     )
     assert review_resp.status_code == 200
     data = review_resp.json()
-    # Verificamos que se mantienen los valores definitivos de la IA
-    assert data["prediccion_urgencia"] is not None
-    assert data["reviewed_by"] == "api_user"
+    # Sin ML disponible en tests, prediccion_urgencia es None pero el ticket queda revisado
+    assert data["reviewed_by"] == "empleado_admin"
+    assert data["status"] == "resolved"
 
 @pytest.mark.asyncio
 async def test_admin_stats_returns_counts(async_client, admin_token):
@@ -120,8 +118,6 @@ async def test_admin_stats_returns_counts(async_client, admin_token):
 async def test_review_nonexistent_ticket_returns_404(async_client, admin_token):
     """Revisar un ticket inexistente debe devolver 404."""
     review_payload = {
-        "urgency": 2,
-        "category": "movilidad",
         "status": "accepted",
     }
     response = await async_client.patch(

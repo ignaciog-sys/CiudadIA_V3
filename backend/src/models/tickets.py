@@ -128,12 +128,14 @@ class TicketClassificationResult(BaseModel):
 
 
 class TicketAdminDecision(BaseModel):
-    """Decisión final del administrador sobre un ticket."""
+    """Acción del empleado sobre un ticket.
 
-    urgency: TicketUrgency = Field(description="Urgencia final decidida por admin")
-    category: TicketCategory = Field(description="Categoría final decidida por admin")
-    notes: str | None = Field(default=None, max_length=2000)
+    El empleado NO puede modificar la urgencia (es definitiva del modelo ML)
+    ni la categoría. Solo puede cambiar el estado e introducir notas de resolución.
+    """
+
     status: TicketStatus = TicketStatus.accepted
+    notes: str | None = Field(default=None, max_length=2000)
 
 
 class TicketSummary(BaseModel):
@@ -155,6 +157,9 @@ class TicketDashboardStats(BaseModel):
     pending_review: int = 0
     open: int = 0
     resolved: int = 0
+    # Tickets donde la categoría del ciudadano difiere de la predicción del modelo.
+    # El empleado debe revisarlos con atención.
+    category_mismatch: int = 0
     by_urgency: dict[TicketUrgency, int] = Field(default_factory=dict)
     by_category: dict[TicketCategory, int] = Field(default_factory=dict)
 

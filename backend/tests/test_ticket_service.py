@@ -14,7 +14,6 @@ from src.models.tickets import (
     TicketChannel,
     TicketCreateInput,
     TicketStatus,
-    TicketUrgency,
 )
 from src.services import ticket_service
 
@@ -103,8 +102,6 @@ async def test_admin_review_sets_final_fields(db_session: AsyncSession, sample_i
     created = await ticket_service.create_ticket(db_session, sample_input)
 
     decision = TicketAdminDecision(
-        urgency=TicketUrgency.high,
-        category=TicketCategory.limpieza,
         status=TicketStatus.in_progress,
         notes="Revisado manualmente por admin.",
     )
@@ -113,8 +110,9 @@ async def test_admin_review_sets_final_fields(db_session: AsyncSession, sample_i
     )
 
     assert reviewed is not None
-    assert reviewed.prediccion_urgencia == TicketUrgency.high
-    assert reviewed.prediccion_categoria == TicketCategory.limpieza
+    # La predicción de la IA se mantiene intacta tras la revisión
+    assert reviewed.prediccion_urgencia is None  # sin ML en tests
+    assert reviewed.prediccion_categoria is None  # sin ML en tests
     assert reviewed.status == TicketStatus.in_progress
     assert reviewed.reviewed_by == "api_user"
     assert reviewed.reviewed_at is not None
@@ -125,8 +123,7 @@ async def test_admin_review_missing_ticket_returns_none(db_session: AsyncSession
     """La revisión sobre un ticket inexistente debe devolver None."""
 
     decision = TicketAdminDecision(
-        urgency=TicketUrgency.low,
-        category=TicketCategory.movilidad,
+        status=TicketStatus.accepted,
     )
     result = await ticket_service.admin_review_ticket(
         db_session, ticket_id=99999, decision=decision, reviewer_username="api_user"

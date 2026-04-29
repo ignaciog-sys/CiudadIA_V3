@@ -66,10 +66,8 @@ def _orm_to_summary(row: TicketORM) -> TicketSummary:
     return TicketSummary(
         id=row.id,  # type: ignore[arg-type]
         category=TicketCategory(row.categoria),
-        urgency=TicketUrgency(row.urgencia) if row.urgencia else None,
         status=TicketStatus(row.status),
         fecha=row.fecha,
-        canal=row.canal,  # type: ignore[arg-type]
         ubicacion_incidencia=row.ubicacion_incidencia,
         prediccion_urgencia=TicketUrgency(row.prediccion_urgencia) if row.prediccion_urgencia else None,
         prediccion_categoria=TicketCategory(row.prediccion_categoria) if row.prediccion_categoria else None,
@@ -106,20 +104,18 @@ async def create_ticket(
 
     # Paso 3: determinar estado y campos de predicción
     if ml_result is not None:
-        status = TicketStatus.pending_review
+        ticket_status = TicketStatus.pending_review
         prediccion_urgencia = int(ml_result.urgency)
         prediccion_categoria = str(ml_result.category)
-        urgencia = int(ml_result.urgency)
         logger.info(
             "ML predijo urgencia=%s, categoria=%s para nuevo ticket.",
             ml_result.urgency,
             ml_result.category,
         )
     else:
-        status = TicketStatus.pending_classification
+        ticket_status = TicketStatus.pending_classification
         prediccion_urgencia = None
         prediccion_categoria = None
-        urgencia = None
         logger.info("Ticket creado sin predicción ML (servicio no disponible).")
 
     # Paso 4: persistir en BD
@@ -135,17 +131,16 @@ async def create_ticket(
         direccion_persona=anon_data["direccion_persona"],
         ubicacion_incidencia=anon_data["ubicacion_incidencia"],
         fecha=anon_data["fecha"],
-        urgencia=urgencia,
         prediccion_urgencia=prediccion_urgencia,
         prediccion_categoria=prediccion_categoria,
-        status=str(status),
+        status=str(ticket_status),
     )
 
     db.add(ticket_orm)
     await db.commit()
     await db.refresh(ticket_orm)
 
-    logger.info("Ticket #%s creado con status=%s.", ticket_orm.id, status)
+    logger.info("Ticket #%s creado con status=%s.", ticket_orm.id, ticket_status)
     return _orm_to_record(ticket_orm)
 
 
@@ -242,17 +237,27 @@ async def get_dashboard_stats(db: AsyncSession) -> TicketDashboardStats:
     # Abiertos (todos los que no están resueltos)
     open_count = total - resolved
 
-    # Distribución por urgencia
+    # Tickets con discordancia entre la categoría del ciudadano y la del modelo.
+    # Solo aplica cuando el modelo ha predicho (prediccion_categoria no es None).
+    mismatch_result = await db.execute(
+        select(func.count()).where(
+            TicketORM.prediccion_categoria.isnot(None),
+            TicketORM.categoria != TicketORM.prediccion_categoria,
+        )
+    )
+    category_mismatch = mismatch_result.scalar_one()
+
+    # Distribución por urgencia según el modelo (la única fuente de verdad de urgencia)
     urgency_result = await db.execute(
-        select(TicketORM.urgencia, func.count())
-        .where(TicketORM.urgencia.isnot(None))
-        .group_by(TicketORM.urgencia)
+        select(TicketORM.prediccion_urgencia, func.count())
+        .where(TicketORM.prediccion_urgencia.isnot(None))
+        .group_by(TicketORM.prediccion_urgencia)
     )
     by_urgency: dict[TicketUrgency, int] = {
         TicketUrgency(u): c for u, c in urgency_result.all()
     }
 
-    # Distribución por categoría
+    # Distribución por categoría del ciudadano
     category_result = await db.execute(
         select(TicketORM.categoria, func.count()).group_by(TicketORM.categoria)
     )
@@ -265,6 +270,7 @@ async def get_dashboard_stats(db: AsyncSession) -> TicketDashboardStats:
         pending_review=pending_review,
         open=open_count,
         resolved=resolved,
+        category_mismatch=category_mismatch,
         by_urgency=by_urgency,
         by_category=by_category,
     )

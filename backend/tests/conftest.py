@@ -60,8 +60,8 @@ async def async_client(db_session: AsyncSession):
 
 @pytest.fixture
 def admin_token() -> str:
-    """JWT firmado con rol admin para tests."""
-    return create_access_token({"sub": "api_user", "role": "admin"})
+    """JWT firmado con rol admin para tests (usuario: empleado_admin)."""
+    return create_access_token({"sub": "empleado_admin", "role": "admin"})
 
 
 # ---------------------------------------------------------------------------
