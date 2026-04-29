@@ -96,32 +96,25 @@ class TicketCreateInput(BaseModel):
 
 
 class TicketAnonymizedRecord(BaseModel):
-    """Versión que se persiste en BD después de anonimizar los datos sensibles.
-
-    Los campos personales se mantienen en el contrato de almacenamiento, pero el
-    valor que se debe escribir siempre es el resultado anonimizado.
-    """
-
+    """Versión que se persiste en BD con los nuevos campos de IA."""
     id: int | None = None
-    nombre: str = Field(description="Nombre ya anonimizado")
-    apellidos: str = Field(description="Apellidos ya anonimizado")
-    nif: str = Field(description="NIF ya anonimizado")
-    telefono: str = Field(description="Teléfono ya anonimizado")
-    email: str = Field(description="Email ya anonimizado")
+    nombre: str 
+    apellidos: str
+    nif: str
+    telefono: str
+    email: str
     categoria: TicketCategory
-    description: str = Field(min_length=1, max_length=4000)
-    urgencia: TicketUrgency | None = None
+    description: str
     fecha: datetime
     canal: TicketChannel
-    direccion_persona: str = Field(min_length=1, max_length=255)
-    ubicacion_incidencia: str = Field(min_length=1, max_length=255)
-    model_urgencia: TicketUrgency | None = None
-    model_categoria: TicketCategory | None = None
-    final_urgencia: TicketUrgency | None = None
-    final_categoria: TicketCategory | None = None
+    direccion_persona: str
+    ubicacion_incidencia: str
+    prediccion_urgencia: TicketUrgency | None = None
+    prediccion_categoria: TicketCategory | None = None  
     status: TicketStatus = TicketStatus.pending_classification
     reviewed_by: str | None = None
     reviewed_at: datetime | None = None
+    admin_notes: str | None = None
 
 
 class TicketClassificationResult(BaseModel):
@@ -148,15 +141,11 @@ class TicketSummary(BaseModel):
 
     id: int
     category: TicketCategory
-    urgency: TicketUrgency | None = None
+    prediccion_urgencia: TicketUrgency | None = None
+    prediccion_categoria: TicketCategory | None = None
     status: TicketStatus
     fecha: datetime
-    canal: TicketChannel
     ubicacion_incidencia: str
-    model_urgencia: TicketUrgency | None = None
-    model_categoria: TicketCategory | None = None
-    final_urgencia: TicketUrgency | None = None
-    final_categoria: TicketCategory | None = None
 
 
 class TicketDashboardStats(BaseModel):

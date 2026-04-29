@@ -9,6 +9,8 @@ API_TAGS = {
     "auth": "auth",
     "items": "items",
     "tickets": "tickets",
+    "admin": "admin",
+    "citizen": "citizen",
 }
 
 DEFAULT_ITEMS = [

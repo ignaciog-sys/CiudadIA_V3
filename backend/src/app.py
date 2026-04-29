@@ -11,11 +11,11 @@ from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 
 from src.config import settings
+from src.db.init_db import init_db
 from src.middleware import register_middlewares
 from src.models.errors import AuthenticationError, ErrorResponse
 from src.routers.auth_router import auth_router
 from src.routers.health_router import health_router
-from src.routers.items_router import items_router
 from src.routers.admin_router import admin_router
 from src.routers.citizen_router import citizen_router
 from src.routers.tickets_router import tickets_router
@@ -28,12 +28,13 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """Gestiona inicio y apagado del servicio.
 
-    Aquí se podrían abrir conexiones, precargar configuración o limpiar recursos.
+    Crea las tablas de BD al arrancar si no existen.
     """
 
-    logger.info("Iniciando la API base de ejemplo")
+    logger.info("Iniciando CiudadAI API...")
+    await init_db()
     yield
-    logger.info("Apagando la API base de ejemplo")
+    logger.info("Apagando CiudadAI API.")
 
 
 app = FastAPI(
@@ -84,7 +85,6 @@ async def generic_exception_handler(request: Request, exc: Exception) -> JSONRes
 # Registro de routers bajo un prefijo de versión para mantener compatibilidad futura.
 app.include_router(health_router, prefix=settings.api_prefix)
 app.include_router(auth_router, prefix=settings.api_prefix)
-app.include_router(items_router, prefix=settings.api_prefix)
 app.include_router(admin_router, prefix=settings.api_prefix)
 app.include_router(citizen_router, prefix=settings.api_prefix)
 app.include_router(tickets_router, prefix=settings.api_prefix)

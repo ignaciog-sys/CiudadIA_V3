@@ -73,17 +73,15 @@ def test_ticket_anonymized_record_contains_control_fields():
         canal=TicketChannel.mobile,
         direccion_persona="Avenida del Parque 2",
         ubicacion_incidencia="Frente al portal 10",
-        model_urgencia=TicketUrgency.medium,
-        model_categoria=TicketCategory.alumbrado_publico,
-        final_urgencia=TicketUrgency.high,
-        final_categoria=TicketCategory.alumbrado_publico,
+        prediccion_urgencia=TicketUrgency.medium,
+        prediccion_categoria=TicketCategory.alumbrado_publico,
         status=TicketStatus.pending_review,
         reviewed_by=None,
         reviewed_at=None,
     )
 
-    assert record.model_urgencia == TicketUrgency.medium
-    assert record.final_urgencia == TicketUrgency.high
+    assert record.prediccion_urgencia == TicketUrgency.medium
+    assert record.prediccion_categoria == TicketCategory.alumbrado_publico
     assert record.status == TicketStatus.pending_review
 
 

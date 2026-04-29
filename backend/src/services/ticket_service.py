@@ -1,0 +1,270 @@
+"""Servicio de negocio para tickets de incidencias.
+
+Propósito: orquestar el flujo completo de una incidencia:
+  1. Anonimizar los datos personales (stub, pendiente del compañero).
+  2. Llamar al servicio de ML para obtener predicción de urgencia y categoría.
+  3. Persistir el ticket anonimizado en PostgreSQL.
+  4. Exponer operaciones de lectura y revisión para admin y ciudadano.
+
+Ninguna función de este módulo conoce detalles HTTP: recibe y devuelve
+objetos de dominio definidos en src/models/tickets.py.
+"""
+
+import logging
+from datetime import datetime, timezone
+
+from sqlalchemy import func, select, update
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from src.clients.ml_client import call_ml_predict
+from src.db.models import TicketORM
+from src.models.tickets import (
+    TicketAdminDecision,
+    TicketAnonymizedRecord,
+    TicketCategory,
+    TicketDashboardStats,
+    TicketStatus,
+    TicketSummary,
+    TicketUrgency,
+)
+from src.models.tickets import TicketCreateInput
+from src.services.anonymizer import anonymize_ticket
+
+logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Helpers de conversión ORM ↔ dominio
+# ---------------------------------------------------------------------------
+
+def _orm_to_record(row: TicketORM) -> TicketAnonymizedRecord:
+    return TicketAnonymizedRecord(
+        id=row.id,
+        nombre=row.nombre,
+        apellidos=row.apellidos,
+        nif=row.nif,
+        telefono=row.telefono,
+        email=row.email,
+        categoria=TicketCategory(row.categoria),
+        description=row.description,
+        fecha=row.fecha,
+        canal=row.canal,
+        direccion_persona=row.direccion_persona,
+        ubicacion_incidencia=row.ubicacion_incidencia,
+        # Mapeo a los nuevos atributos
+        prediccion_urgencia=TicketUrgency(row.prediccion_urgencia) if row.prediccion_urgencia else None,
+        prediccion_categoria=TicketCategory(row.prediccion_categoria) if row.prediccion_categoria else None,
+        status=TicketStatus(row.status),
+        reviewed_by=row.reviewed_by,
+        reviewed_at=row.reviewed_at,
+        admin_notes=row.admin_notes
+    )
+
+
+def _orm_to_summary(row: TicketORM) -> TicketSummary:
+    """Convierte una fila ORM al resumen mínimo para listados."""
+    return TicketSummary(
+        id=row.id,  # type: ignore[arg-type]
+        category=TicketCategory(row.categoria),
+        urgency=TicketUrgency(row.urgencia) if row.urgencia else None,
+        status=TicketStatus(row.status),
+        fecha=row.fecha,
+        canal=row.canal,  # type: ignore[arg-type]
+        ubicacion_incidencia=row.ubicacion_incidencia,
+        prediccion_urgencia=TicketUrgency(row.prediccion_urgencia) if row.prediccion_urgencia else None,
+        prediccion_categoria=TicketCategory(row.prediccion_categoria) if row.prediccion_categoria else None,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Operaciones principales
+# ---------------------------------------------------------------------------
+
+async def create_ticket(
+    db: AsyncSession,
+    ticket_input: TicketCreateInput,
+) -> TicketAnonymizedRecord:
+    """Crea un nuevo ticket siguiendo el flujo completo.
+
+    Pasos:
+      1. Anonimizar los datos personales del ciudadano (stub por ahora).
+      2. Llamar al servicio ML para predecir urgencia y categoría.
+      3. Persistir el ticket anonimizado con los metadatos de predicción.
+
+    Si el servicio ML no responde, el ticket queda en `pending_classification`
+    y podrá ser clasificado manualmente por el admin.
+    """
+
+    # Paso 1: anonimización (stub hasta que el compañero lo implemente)
+    anon_data = anonymize_ticket(ticket_input)
+
+    # Paso 2: inferencia ML (con fallback a None)
+    ml_result = await call_ml_predict(
+        description=ticket_input.description,
+        categoria=ticket_input.categoria,
+    )
+
+    # Paso 3: determinar estado y campos de predicción
+    if ml_result is not None:
+        status = TicketStatus.pending_review
+        prediccion_urgencia = int(ml_result.urgency)
+        prediccion_categoria = str(ml_result.category)
+        urgencia = int(ml_result.urgency)
+        logger.info(
+            "ML predijo urgencia=%s, categoria=%s para nuevo ticket.",
+            ml_result.urgency,
+            ml_result.category,
+        )
+    else:
+        status = TicketStatus.pending_classification
+        prediccion_urgencia = None
+        prediccion_categoria = None
+        urgencia = None
+        logger.info("Ticket creado sin predicción ML (servicio no disponible).")
+
+    # Paso 4: persistir en BD
+    ticket_orm = TicketORM(
+        nombre=anon_data["nombre"],
+        apellidos=anon_data["apellidos"],
+        nif=anon_data["nif"],
+        telefono=anon_data["telefono"],
+        email=anon_data["email"],
+        categoria=str(anon_data["categoria"]),
+        description=anon_data["description"],
+        canal=str(anon_data["canal"]),
+        direccion_persona=anon_data["direccion_persona"],
+        ubicacion_incidencia=anon_data["ubicacion_incidencia"],
+        fecha=anon_data["fecha"],
+        urgencia=urgencia,
+        prediccion_urgencia=prediccion_urgencia,
+        prediccion_categoria=prediccion_categoria,
+        status=str(status),
+    )
+
+    db.add(ticket_orm)
+    await db.commit()
+    await db.refresh(ticket_orm)
+
+    logger.info("Ticket #%s creado con status=%s.", ticket_orm.id, status)
+    return _orm_to_record(ticket_orm)
+
+
+async def get_ticket(
+    db: AsyncSession,
+    ticket_id: int,
+) -> TicketAnonymizedRecord | None:
+    """Obtiene un ticket por su ID. Retorna None si no existe."""
+
+    result = await db.execute(select(TicketORM).where(TicketORM.id == ticket_id))
+    row = result.scalar_one_or_none()
+    return _orm_to_record(row) if row else None
+
+
+async def list_tickets(
+    db: AsyncSession,
+    status_filter: TicketStatus | None = None,
+    skip: int = 0,
+    limit: int = 50,
+) -> list[TicketSummary]:
+    """Lista tickets con paginación y filtro opcional de estado."""
+
+    query = select(TicketORM).order_by(TicketORM.created_at.desc()).offset(skip).limit(limit)
+    if status_filter is not None:
+        query = query.where(TicketORM.status == str(status_filter))
+
+    result = await db.execute(query)
+    rows = result.scalars().all()
+    return [_orm_to_summary(row) for row in rows]
+
+
+async def admin_review_ticket(
+    db: AsyncSession,
+    ticket_id: int,
+    decision: TicketAdminDecision,
+    reviewer_username: str,
+) -> TicketAnonymizedRecord | None:
+    """Registra la respuesta del empleado y cierra la incidencia.
+
+    El empleado ya no modifica la urgencia (es definitiva de la IA), 
+    pero añade notas de resolución y cambia el estado a 'resolved'.
+    """
+
+    # 1. Verificar si el ticket existe
+    result = await db.execute(select(TicketORM).where(TicketORM.id == ticket_id))
+    row = result.scalar_one_or_none()
+    if row is None:
+        return None
+
+    # 2. Actualizar solo los campos que existen tras el cambio de atributos
+    await db.execute(
+        update(TicketORM)
+        .where(TicketORM.id == ticket_id)
+        .values(
+            status=str(decision.status),
+            reviewed_by=reviewer_username,
+            reviewed_at=datetime.now(timezone.utc),
+            admin_notes=decision.notes, 
+        )
+    )
+    
+    await db.commit()
+    await db.refresh(row)
+
+    logger.info(
+        "Ticket #%s cerrado por empleado %s con estado %s.",
+        ticket_id,
+        reviewer_username,
+        decision.status,
+    )
+    
+    return _orm_to_record(row)
+
+
+async def get_dashboard_stats(db: AsyncSession) -> TicketDashboardStats:
+    """Calcula estadísticas agregadas para el dashboard del admin."""
+
+    # Total de tickets
+    total_result = await db.execute(select(func.count()).select_from(TicketORM))
+    total = total_result.scalar_one()
+
+    # Pendientes de revisión
+    pending_result = await db.execute(
+        select(func.count()).where(TicketORM.status == str(TicketStatus.pending_review))
+    )
+    pending_review = pending_result.scalar_one()
+
+    # Resueltos
+    resolved_result = await db.execute(
+        select(func.count()).where(TicketORM.status == str(TicketStatus.resolved))
+    )
+    resolved = resolved_result.scalar_one()
+
+    # Abiertos (todos los que no están resueltos)
+    open_count = total - resolved
+
+    # Distribución por urgencia
+    urgency_result = await db.execute(
+        select(TicketORM.urgencia, func.count())
+        .where(TicketORM.urgencia.isnot(None))
+        .group_by(TicketORM.urgencia)
+    )
+    by_urgency: dict[TicketUrgency, int] = {
+        TicketUrgency(u): c for u, c in urgency_result.all()
+    }
+
+    # Distribución por categoría
+    category_result = await db.execute(
+        select(TicketORM.categoria, func.count()).group_by(TicketORM.categoria)
+    )
+    by_category: dict[TicketCategory, int] = {
+        TicketCategory(cat): c for cat, c in category_result.all()
+    }
+
+    return TicketDashboardStats(
+        total=total,
+        pending_review=pending_review,
+        open=open_count,
+        resolved=resolved,
+        by_urgency=by_urgency,
+        by_category=by_category,
+    )

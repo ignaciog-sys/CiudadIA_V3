@@ -1,37 +1,92 @@
-"""Router de panel de ciudadanos.
+"""Router de ciudadanos.
 
-Propósito: rutas exclusivas para usuarios ciudadanos.
+Propósito: exponer rutas públicas para ciudadanos: creación de incidencias 
+y consulta de estado por ID. No requiere autenticación[cite: 1].
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.deps import get_current_user
-from src.models.auth import CurrentUser
 from src.common.responses import COMMON_ERROR_RESPONSES
 from src.constants import API_TAGS
+from src.db.session import get_db
+from src.models.tickets import (
+    TicketAnonymizedRecord,
+    TicketCreateInput,
+    TicketStatus,
+    TicketSummary,
+)
+from src.services import ticket_service
 
-citizen_router = APIRouter(prefix="/citizen", tags=[API_TAGS.get("citizen", "citizen")])
+citizen_router = APIRouter(prefix="/citizen", tags=[API_TAGS["citizen"]])
+
+
+@citizen_router.post(
+    "/tickets",
+    status_code=status.HTTP_201_CREATED,
+    responses=COMMON_ERROR_RESPONSES,
+    summary="Crear nueva incidencia",
+)
+async def citizen_create_ticket(
+    body: TicketCreateInput,
+    db: AsyncSession = Depends(get_db),
+) -> TicketAnonymizedRecord:
+    """
+    El ciudadano reporta una nueva incidencia de forma pública.
+    Los datos se anonimizan y la IA predice la urgencia automáticamente.
+    """
+
+    return await ticket_service.create_ticket(db, body)
 
 
 @citizen_router.get(
-    "/dashboard",
+    "/tickets/{ticket_id}/status",
+    status_code=status.HTTP_200_OK,
     responses=COMMON_ERROR_RESPONSES,
+    summary="Consultar estado de un ticket por ID",
 )
-async def citizen_dashboard(user: CurrentUser = Depends(get_current_user)):
-    """Acceso exclusivo para ciudadanos."""
+async def get_ticket_status(
+    ticket_id: int,
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """
+    Permite consultar si una incidencia está 'pendiente' o 'cerrada' 
+    introduciendo únicamente el ID del ticket[cite: 1].
+    """
     
-    if user.role != "citizen":
+    record = await ticket_service.get_ticket(db, ticket_id)
+    
+    if record is None:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Solo los ciudadanos pueden acceder a este recurso.",
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No se ha encontrado ninguna incidencia con el ID #{ticket_id}.",
         )
-    
+
+    # Mapeo de estados según requerimientos: Resolved -> cerrado, resto -> pendiente[cite: 1, 20]
+    estado_ciudadano = "cerrado" if record.status == "resolved" else "pendiente"
+
     return {
-        "message": "🏙️ ERES CIUDADANO - CUIDA TU CIUDAD",
-        "username": user.username,
-        "role": user.role,
-        "content": {
-            "title": "Panel de Ciudadano",
-            "description": "Reporta incidencias en tu ciudad y ayuda a mantenerla mejor"
-        }
+        "id": record.id,
+        "estado": estado_ciudadano,
+        "categoria": record.categoria,
+        "fecha_creacion": record.fecha
     }
+
+
+@citizen_router.get(
+    "/tickets",
+    status_code=status.HTTP_200_OK,
+    responses=COMMON_ERROR_RESPONSES,
+    summary="Listar incidencias (Público)",
+)
+async def citizen_list_tickets(
+    status_filter: TicketStatus | None = Query(default=None, alias="status"),
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=50, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+) -> list[TicketSummary]:
+    """
+    Lista las incidencias del sistema de forma abierta.
+    """
+
+    return await ticket_service.list_tickets(db, status_filter, skip, limit)

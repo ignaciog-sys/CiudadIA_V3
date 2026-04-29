@@ -1,6 +1,18 @@
-# Dependencias mínimas de ejecución para la plantilla.
-# Ejemplo: FastAPI sirve la API y Pydantic Settings carga configuración desde `.env`.
+# Dependencias de ejecución del backend CiudadAI.
 
+# Framework y servidor
 fastapi==0.115.12
 uvicorn[standard]==0.34.2
 pydantic-settings==2.9.1
+email-validator==2.2.0
+
+# Base de datos async (PostgreSQL)
+sqlalchemy[asyncio]==2.0.40
+asyncpg==0.30.0
+
+# Autenticación JWT + hash de contraseñas
+python-jose[cryptography]==3.3.0
+bcrypt==4.3.0
+
+# Cliente HTTP para el servicio ML
+httpx==0.28.1

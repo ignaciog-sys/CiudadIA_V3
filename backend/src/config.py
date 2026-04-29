@@ -4,7 +4,7 @@ Propósito: leer variables de entorno con Pydantic Settings y ofrecer un objeto 
 Ejemplo de uso: importar settings desde cualquier módulo para evitar valores hardcoded.
 """
 
-from pydantic import Field
+from pydantic import Field, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from src import __description__, __title__, __version__
@@ -35,10 +35,42 @@ class Settings(BaseSettings):
         default=30,
         alias="ACCESS_TOKEN_EXPIRE_MINUTES",
     )
-    # Parámetros mock para bootstrap de seguridad básica.
+
+    # --- Autenticación JWT real ---
+    secret_key: str = Field(
+        default="CAMBIA_ESTO_EN_PRODUCCION_usa_openssl_rand_hex_32",
+        alias="SECRET_KEY",
+    )
+    jwt_algorithm: str = Field(default="HS256", alias="JWT_ALGORITHM")
+
+    # --- Credenciales hardcoded (mock de usuarios) ---
+    # Usuarios gestionados en auth_service.py con hashes bcrypt.
     mock_auth_username: str = Field(default="api_user", alias="MOCK_AUTH_USERNAME")
     mock_auth_password: str = Field(default="change_me", alias="MOCK_AUTH_PASSWORD")
     mock_auth_token: str = Field(default="bootstrap-token", alias="MOCK_AUTH_TOKEN")
 
+    # --- Base de datos PostgreSQL ---
+    db_host: str = Field(default="localhost", alias="DB_HOST")
+    db_port: int = Field(default=5432, alias="DB_PORT")
+    db_name: str = Field(default="ciudadia", alias="DB_NAME")
+    db_user: str = Field(default="ciudadia_user", alias="DB_USER")
+    db_password: str = Field(default="ciudadia_pass", alias="DB_PASSWORD")
 
-settings = Settings()
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def database_url(self) -> str:
+        """URL de conexión async para SQLAlchemy + asyncpg."""
+        return (
+            f"postgresql+asyncpg://{self.db_user}:{self.db_password}"
+            f"@{self.db_host}:{self.db_port}/{self.db_name}"
+        )
+
+    # --- Servicio de inferencia ML ---
+    ml_service_url: str = Field(
+        default="http://ml_service:8001",
+        alias="ML_SERVICE_URL",
+    )
+    ml_service_timeout: float = Field(default=10.0, alias="ML_SERVICE_TIMEOUT")
+
+
+settings = Settings()
