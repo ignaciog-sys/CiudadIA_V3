@@ -2,11 +2,36 @@
 # Ejemplo: monta el código local y ejecuta Uvicorn con `--reload`.
 
 services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: ciudadia
+      POSTGRES_USER: ciudadia_user
+      POSTGRES_PASSWORD: ciudadia_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ciudadia_user -d ciudadia"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   api:
     build: ./backend
     command: uvicorn src.app:app --host 0.0.0.0 --port 8000 --reload
     env_file:
       - ./backend/.env
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ciudadia
+      DB_USER: ciudadia_user
+      DB_PASSWORD: ciudadia_pass
+    depends_on:
+      postgres:
+        condition: service_healthy
     ports:
       - "8000:8000"
     volumes:
@@ -23,3 +48,6 @@ services:
       - "8500:8500"
     volumes:
       - ./frontend:/app
+
+volumes:
+  postgres_data:
