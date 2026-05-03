@@ -31,6 +31,7 @@ tickets_router = APIRouter(prefix="/tickets", tags=[API_TAGS["tickets"]])
 # Endpoint de especificación del contrato (sin autenticación)
 # ---------------------------------------------------------------------------
 
+
 @tickets_router.get(
     "/spec",
     status_code=status.HTTP_200_OK,
@@ -42,16 +43,35 @@ async def ticket_spec() -> TicketContractSpec:
 
     return TicketContractSpec(
         input_fields=[
-            "nombre", "apellidos", "nif", "telefono", "email",
-            "categoria", "description",
-            "direccion_persona", "ubicacion_incidencia", "fecha",
+            "nombre",
+            "apellidos",
+            "nif",
+            "telefono",
+            "email",
+            "categoria",
+            "description",
+            "direccion_persona",
+            "ubicacion_incidencia",
+            "fecha",
         ],
         persisted_fields=[
-            "id", "nombre", "apellidos", "nif", "telefono", "email",
-            "categoria", "description", "urgencia", "fecha",
-            "direccion_persona", "ubicacion_incidencia",
-            "prediccion_urgencia", "prediccion_categoria",
-            "status", "reviewed_by", "reviewed_at",
+            "id",
+            "nombre",
+            "apellidos",
+            "nif",
+            "telefono",
+            "email",
+            "categoria",
+            "description",
+            "urgencia",
+            "fecha",
+            "direccion_persona",
+            "ubicacion_incidencia",
+            "prediccion_urgencia",
+            "prediccion_categoria",
+            "status",
+            "reviewed_by",
+            "reviewed_at",
         ],
         anonymized_fields=["nombre", "apellidos", "nif", "telefono", "email"],
         urgency_scale=[1, 2, 3, 4, 5],
@@ -64,6 +84,7 @@ async def ticket_spec() -> TicketContractSpec:
 # Ciudadano: crear un ticket
 # ---------------------------------------------------------------------------
 
+
 @tickets_router.post(
     "",
     status_code=status.HTTP_201_CREATED,
@@ -71,8 +92,7 @@ async def ticket_spec() -> TicketContractSpec:
     summary="Crear nueva incidencia (ciudadano)",
 )
 async def create_ticket(
-    body: TicketCreateInput,
-    db: AsyncSession = Depends(get_db)
+    body: TicketCreateInput, db: AsyncSession = Depends(get_db)
 ) -> TicketAnonymizedRecord:
     """Crea una nueva incidencia.
 
@@ -86,6 +106,7 @@ async def create_ticket(
 # ---------------------------------------------------------------------------
 # Listar tickets (admin ve todos; ciudadano podría ver los suyos — aquí admin)
 # ---------------------------------------------------------------------------
+
 
 @tickets_router.get(
     "",
@@ -108,6 +129,7 @@ async def list_tickets(
 # ---------------------------------------------------------------------------
 # Detalle de un ticket (admin)
 # ---------------------------------------------------------------------------
+
 
 @tickets_router.get(
     "/{ticket_id}",
@@ -135,6 +157,7 @@ async def get_ticket(
 # Admin: revisar un ticket
 # ---------------------------------------------------------------------------
 
+
 @tickets_router.patch(
     "/{ticket_id}/review",
     status_code=status.HTTP_200_OK,
@@ -149,7 +172,9 @@ async def review_ticket(
 ) -> TicketAnonymizedRecord:
     """El admin acepta o modifica la predicción del modelo y cierra la revisión."""
 
-    record = await ticket_service.admin_review_ticket(db, ticket_id, body, user.username)
+    record = await ticket_service.admin_review_ticket(
+        db, ticket_id, body, user.username
+    )
     if record is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

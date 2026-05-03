@@ -27,11 +27,13 @@ TICKET_PAYLOAD = {
 # Tests de autorización (Solo para Admin)
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_admin_dashboard_requires_auth(async_client):
     """El dashboard de admin debe rechazar requests sin token."""
     response = await async_client.get("/api/v1/admin/dashboard")
     assert response.status_code == 401
+
 
 @pytest.mark.asyncio
 async def test_admin_dashboard_accepts_admin(async_client, admin_token):
@@ -44,6 +46,7 @@ async def test_admin_dashboard_accepts_admin(async_client, admin_token):
     data = response.json()
     assert data["role"] == "admin"
     assert "content" in data and "title" in data["content"]
+
 
 @pytest.mark.asyncio
 async def test_items_endpoint_returns_default_items(async_client):
@@ -58,6 +61,7 @@ async def test_items_endpoint_returns_default_items(async_client):
     assert "id" in data["items"][0] and "name" in data["items"][0]
     assert data.get("requested_by") == "frontend"
 
+
 @pytest.mark.asyncio
 async def test_citizen_dashboard_endpoint_is_available(async_client):
     """El endpoint ciudadano de dashboard debe responder con contenido de bienvenida."""
@@ -67,9 +71,11 @@ async def test_citizen_dashboard_endpoint_is_available(async_client):
     assert data["message"].startswith("Bienvenido")
     assert "content" in data and "title" in data["content"]
 
+
 # ---------------------------------------------------------------------------
 # Tests del flujo de tickets (Ciudadano Público / Admin Autenticado)
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_citizen_can_create_ticket_publicly(async_client):
@@ -82,6 +88,7 @@ async def test_citizen_can_create_ticket_publicly(async_client):
     data = response.json()
     assert data["id"] is not None
     assert data["categoria"] == "limpieza"
+
 
 @pytest.mark.asyncio
 async def test_admin_can_list_tickets(async_client, admin_token):
@@ -97,11 +104,14 @@ async def test_admin_can_list_tickets(async_client, admin_token):
     assert response.status_code == 200
     assert isinstance(response.json(), list)
 
+
 @pytest.mark.asyncio
 async def test_admin_can_review_ticket(async_client, admin_token):
     """El admin puede revisar un ticket existente usando los nuevos campos de predicción."""
     # Crear ticket público
-    create_resp = await async_client.post("/api/v1/citizen/tickets", json=TICKET_PAYLOAD)
+    create_resp = await async_client.post(
+        "/api/v1/citizen/tickets", json=TICKET_PAYLOAD
+    )
     ticket_id = create_resp.json()["id"]
 
     # Revisar como admin (Ajustado a los nuevos atributos prediccion_*)
@@ -120,6 +130,7 @@ async def test_admin_can_review_ticket(async_client, admin_token):
     assert data["reviewed_by"] == "empleado_admin"
     assert data["status"] == "resolved"
 
+
 @pytest.mark.asyncio
 async def test_admin_stats_returns_counts(async_client, admin_token):
     """El endpoint de estadísticas debe devolver campos numéricos."""
@@ -134,6 +145,7 @@ async def test_admin_stats_returns_counts(async_client, admin_token):
     data = response.json()
     assert "total" in data
     assert data["total"] >= 1
+
 
 @pytest.mark.asyncio
 async def test_review_nonexistent_ticket_returns_404(async_client, admin_token):

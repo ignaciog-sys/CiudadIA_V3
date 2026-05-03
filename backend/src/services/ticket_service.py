@@ -37,6 +37,7 @@ logger = logging.getLogger(__name__)
 # Helpers de conversión ORM ↔ dominio
 # ---------------------------------------------------------------------------
 
+
 def _orm_to_record(row: TicketORM) -> TicketAnonymizedRecord:
     return TicketAnonymizedRecord(
         id=row.id,
@@ -51,12 +52,16 @@ def _orm_to_record(row: TicketORM) -> TicketAnonymizedRecord:
         direccion_persona=row.direccion_persona,
         ubicacion_incidencia=row.ubicacion_incidencia,
         # Mapeo a los nuevos atributos
-        prediccion_urgencia=TicketUrgency(row.prediccion_urgencia) if row.prediccion_urgencia else None,
-        prediccion_categoria=TicketCategory(row.prediccion_categoria) if row.prediccion_categoria else None,
+        prediccion_urgencia=TicketUrgency(row.prediccion_urgencia)
+        if row.prediccion_urgencia
+        else None,
+        prediccion_categoria=TicketCategory(row.prediccion_categoria)
+        if row.prediccion_categoria
+        else None,
         status=TicketStatus(row.status),
         reviewed_by=row.reviewed_by,
         reviewed_at=row.reviewed_at,
-        admin_notes=row.admin_notes
+        admin_notes=row.admin_notes,
     )
 
 
@@ -69,14 +74,19 @@ def _orm_to_summary(row: TicketORM) -> TicketSummary:
         fecha=row.fecha,
         ubicacion_incidencia=row.ubicacion_incidencia,
         description=row.description,
-        prediccion_urgencia=TicketUrgency(row.prediccion_urgencia) if row.prediccion_urgencia else None,
-        prediccion_categoria=TicketCategory(row.prediccion_categoria) if row.prediccion_categoria else None,
+        prediccion_urgencia=TicketUrgency(row.prediccion_urgencia)
+        if row.prediccion_urgencia
+        else None,
+        prediccion_categoria=TicketCategory(row.prediccion_categoria)
+        if row.prediccion_categoria
+        else None,
     )
 
 
 # ---------------------------------------------------------------------------
 # Operaciones principales
 # ---------------------------------------------------------------------------
+
 
 async def create_ticket(
     db: AsyncSession,
@@ -162,7 +172,12 @@ async def list_tickets(
 ) -> list[TicketSummary]:
     """Lista tickets con paginación y filtro opcional de estado."""
 
-    query = select(TicketORM).order_by(TicketORM.created_at.desc()).offset(skip).limit(limit)
+    query = (
+        select(TicketORM)
+        .order_by(TicketORM.created_at.desc())
+        .offset(skip)
+        .limit(limit)
+    )
     if status_filter is not None:
         query = query.where(TicketORM.status == str(status_filter))
 
@@ -179,7 +194,7 @@ async def admin_review_ticket(
 ) -> TicketAnonymizedRecord | None:
     """Registra la respuesta del empleado y cierra la incidencia.
 
-    El empleado ya no modifica la urgencia (es definitiva de la IA), 
+    El empleado ya no modifica la urgencia (es definitiva de la IA),
     pero añade notas de resolución y cambia el estado a 'resolved'.
     """
 
@@ -200,7 +215,7 @@ async def admin_review_ticket(
             admin_notes=decision.notes,
         )
     )
-    
+
     await db.commit()
     await db.refresh(row)
 
@@ -210,7 +225,7 @@ async def admin_review_ticket(
         reviewer_username,
         decision.status,
     )
-    
+
     return _orm_to_record(row)
 
 

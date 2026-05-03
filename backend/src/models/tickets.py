@@ -88,7 +88,9 @@ class TicketCreateInput(BaseModel):
     def validate_name(cls, value: str) -> str:
         normalized = value.strip()
         if not re.fullmatch(r"[A-Za-zÁÉÍÓÚáéíóúÑñÜü\s]+", normalized):
-            raise ValueError("Solo se permiten letras y espacios en nombre y apellidos.")
+            raise ValueError(
+                "Solo se permiten letras y espacios en nombre y apellidos."
+            )
         return normalized
 
     @validator("nif")
@@ -108,8 +110,9 @@ class TicketCreateInput(BaseModel):
 
 class TicketAnonymizedRecord(BaseModel):
     """Versión que se persiste en BD con los nuevos campos de IA."""
+
     id: int | None = None
-    nombre: str 
+    nombre: str
     apellidos: str
     nif: str
     telefono: str
@@ -120,7 +123,7 @@ class TicketAnonymizedRecord(BaseModel):
     direccion_persona: str
     ubicacion_incidencia: str
     prediccion_urgencia: TicketUrgency | None = None
-    prediccion_categoria: TicketCategory | None = None  
+    prediccion_categoria: TicketCategory | None = None
     status: TicketStatus = TicketStatus.pending_classification
     reviewed_by: str | None = None
     reviewed_at: datetime | None = None

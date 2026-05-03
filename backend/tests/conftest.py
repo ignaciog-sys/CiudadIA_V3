@@ -43,6 +43,7 @@ async def db_session():
 # Cliente HTTP con BD sobreescrita
 # ---------------------------------------------------------------------------
 
+
 @pytest_asyncio.fixture
 async def async_client(db_session: AsyncSession):
     """Cliente async con la BD en memoria inyectada."""
@@ -58,6 +59,7 @@ async def async_client(db_session: AsyncSession):
 # Tokens de test
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def admin_token() -> str:
     """JWT firmado con rol admin para tests (usuario: empleado_admin)."""
@@ -67,6 +69,7 @@ def admin_token() -> str:
 # ---------------------------------------------------------------------------
 # Cliente síncrono (compatibilidad con tests legacy)
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def client() -> TestClient:

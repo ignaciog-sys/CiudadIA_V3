@@ -54,11 +54,11 @@ def anonymize_ticket(ticket_input: TicketCreateInput) -> dict:
 
     # --- STUB: se devuelven los datos tal cual hasta que el compañero implemente esto ---
     return {
-        "nombre": ticket_input.nombre,        # TODO: anonimizar
+        "nombre": ticket_input.nombre,  # TODO: anonimizar
         "apellidos": ticket_input.apellidos,  # TODO: anonimizar
-        "nif": ticket_input.nif,              # TODO: anonimizar
-        "telefono": ticket_input.telefono,    # TODO: anonimizar
-        "email": ticket_input.email,          # TODO: anonimizar
+        "nif": ticket_input.nif,  # TODO: anonimizar
+        "telefono": ticket_input.telefono,  # TODO: anonimizar
+        "email": ticket_input.email,  # TODO: anonimizar
         # Campos no sensibles — pasar sin modificar
         "categoria": ticket_input.categoria,
         "description": ticket_input.description,

@@ -94,7 +94,9 @@ def decode_access_token(token: str) -> dict | None:
         logger.debug("Token JWT inválido o expirado: %s", exc)
         return None
 
+
 # --- Helpers para compatibilidad con Routers ---
+
 
 def authenticate_demo_user(username: str, password: str) -> dict | None:
     """Procesa el login y devuelve el token listo para el cliente (Empleado)."""

@@ -22,7 +22,6 @@ def sample_input() -> TicketCreateInput:
         email="ana@example.com",
         categoria=TicketCategory.movilidad,
         description="Hay un bache enorme en la Calle Mayor.",
-
         direccion_persona="Calle Mayor 1",
         ubicacion_incidencia="Esquina con la Plaza Central",
     )
@@ -35,9 +34,16 @@ def test_anonymize_returns_dict(sample_input):
 
     assert isinstance(result, dict)
     expected_keys = {
-        "nombre", "apellidos", "nif", "telefono", "email",
-        "categoria", "description",
-        "direccion_persona", "ubicacion_incidencia", "fecha",
+        "nombre",
+        "apellidos",
+        "nif",
+        "telefono",
+        "email",
+        "categoria",
+        "description",
+        "direccion_persona",
+        "ubicacion_incidencia",
+        "fecha",
     }
     assert expected_keys == set(result.keys())
 
@@ -67,6 +73,7 @@ def test_anonymize_fecha_is_datetime(sample_input):
 # En ese momento, reemplazar este test por uno que verifique el enmascarado.
 # ---------------------------------------------------------------------------
 
+
 def test_stub_warning_fields_are_not_yet_anonymized(sample_input):
     """STUB: este test documenta que los campos sensibles aún no están anonimizados.
 
@@ -78,4 +85,4 @@ def test_stub_warning_fields_are_not_yet_anonymized(sample_input):
 
     # Mientras sea el stub, los datos originales pasan sin modificar.
     assert result["nombre"] == sample_input.nombre  # TODO: cambiar a "A***" o similar
-    assert result["nif"] == sample_input.nif          # TODO: cambiar a "***"
+    assert result["nif"] == sample_input.nif  # TODO: cambiar a "***"

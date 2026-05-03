@@ -1,6 +1,6 @@
 """Router de ciudadanos.
 
-Propósito: exponer rutas públicas para ciudadanos: creación de incidencias 
+Propósito: exponer rutas públicas para ciudadanos: creación de incidencias
 y consulta de estado por ID. No requiere autenticación[cite: 1].
 """
 
@@ -71,12 +71,12 @@ async def get_ticket_status(
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     """
-    Permite consultar si una incidencia está 'pendiente' o 'cerrada' 
+    Permite consultar si una incidencia está 'pendiente' o 'cerrada'
     introduciendo únicamente el ID del ticket[cite: 1].
     """
-    
+
     record = await ticket_service.get_ticket(db, ticket_id)
-    
+
     if record is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

@@ -39,6 +39,7 @@ def require_admin(user: CurrentUser = Depends(get_current_user)) -> CurrentUser:
         )
     return user
 
+
 # Re-exportar get_db para que los routers puedan importarlo desde deps sin
 # conocer la ubicación interna del módulo de base de datos.
 __all__ = ["get_current_user", "require_admin", "get_db"]

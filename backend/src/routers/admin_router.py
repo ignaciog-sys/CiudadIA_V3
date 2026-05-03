@@ -115,7 +115,9 @@ async def admin_review_ticket(
 ) -> TicketAnonymizedRecord:
     """El admin acepta o modifica la predicción del modelo sobre urgencia y categoría."""
 
-    record = await ticket_service.admin_review_ticket(db, ticket_id, body, user.username)
+    record = await ticket_service.admin_review_ticket(
+        db, ticket_id, body, user.username
+    )
     if record is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

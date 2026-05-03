@@ -40,7 +40,9 @@ async def login(payload: LoginInput) -> TokenResponse:
     response_model=CurrentUser,
     responses=COMMON_ERROR_RESPONSES,
 )
-async def read_current_user(user: CurrentUser = Depends(get_current_user)) -> CurrentUser:
+async def read_current_user(
+    user: CurrentUser = Depends(get_current_user),
+) -> CurrentUser:
     """Devuelve el usuario autenticado actual.
 
     Útil para depurar integración de clientes y validar que el bearer token está llegando correctamente.

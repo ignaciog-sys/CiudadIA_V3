@@ -87,7 +87,9 @@ if settings.secret_key is None:
         )
         settings.secret_key = secrets.token_hex(32)
     else:
-        raise ValueError("SECRET_KEY must be set in environment for non-dev environments")
+        raise ValueError(
+            "SECRET_KEY must be set in environment for non-dev environments"
+        )
 
 if settings.mock_auth_username and settings.mock_auth_password:
     # sensible to log that demo credentials are active (no password value printed)
