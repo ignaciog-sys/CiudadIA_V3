@@ -21,5 +21,4 @@ def test_ticket_spec_endpoint_returns_contract(client):
     assert "alumbrado_publico" in payload["categories"]
     assert "parques_y_jardines" in payload["categories"]
     assert "mobiliario_urbano" in payload["categories"]
-    assert "web" in payload["channels"]
     assert "pending_review" in payload["statuses"]

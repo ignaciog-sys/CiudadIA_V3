@@ -22,7 +22,7 @@ def sample_input() -> TicketCreateInput:
         nombre="Pedro",
         apellidos="Martínez Gil",
         nif="87654321B",
-        telefono="611222333",
+        telefono="+34 611222333",
         email="pedro@example.com",
         categoria=TicketCategory.limpieza,
         description="Contenedores de basura llenos hace tres días en la plaza.",

@@ -15,7 +15,7 @@ TICKET_PAYLOAD = {
     "nombre": "María",
     "apellidos": "López Sanz",
     "nif": "11111111C",
-    "telefono": "622333444",
+    "telefono": "+34 622333444",
     "email": "maria@example.com",
     "categoria": "limpieza",
     "description": "Hay grafitis en la fachada del ayuntamiento.",
@@ -127,7 +127,7 @@ async def test_admin_can_review_ticket(async_client, admin_token):
     assert review_resp.status_code == 200
     data = review_resp.json()
     # Sin ML disponible en tests, prediccion_urgencia es None pero el ticket queda revisado
-    assert data["reviewed_by"] == "empleado_admin"
+    assert data["reviewed_by"] == "api_user"
     assert data["status"] == "resolved"
 
 

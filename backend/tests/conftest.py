@@ -4,6 +4,8 @@ Propósito: crear un cliente de pruebas reutilizable y una BD en memoria
 para tests de integración sin necesitar PostgreSQL real.
 """
 
+import os
+
 import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
@@ -13,7 +15,21 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from src.app import app
 from src.db.models import Base
 from src.db.session import get_db
-from src.services.auth_service import create_access_token
+from src.services.auth_service import _build_users_db_from_settings, create_access_token
+
+# ---------------------------------------------------------------------------
+# Mock auth setup
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(scope="session", autouse=True)
+def setup_mock_auth():
+    """Set up mock auth environment and populate USERS_DB for tests."""
+    os.environ["MOCK_AUTH_USERNAME"] = "api_user"
+    os.environ["MOCK_AUTH_PASSWORD"] = "change_me"
+    _build_users_db_from_settings()
+    yield
+
 
 # ---------------------------------------------------------------------------
 # BD SQLite en memoria para tests
@@ -62,8 +78,8 @@ async def async_client(db_session: AsyncSession):
 
 @pytest.fixture
 def admin_token() -> str:
-    """JWT firmado con rol admin para tests (usuario: empleado_admin)."""
-    return create_access_token({"sub": "empleado_admin", "role": "admin"})
+    """JWT firmado con rol admin para tests (usuario: api_user)."""
+    return create_access_token({"sub": "api_user", "role": "admin"})
 
 
 # ---------------------------------------------------------------------------

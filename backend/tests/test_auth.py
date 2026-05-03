@@ -10,7 +10,7 @@ def test_login_returns_token_for_valid_credentials(client):
 
     response = client.post(
         "/api/v1/auth/login",
-        json={"username": "empleado_admin", "password": "change_me"},
+        json={"username": "api_user", "password": "change_me"},
     )
 
     assert response.status_code == 200
@@ -25,7 +25,7 @@ def test_protected_endpoint_requires_valid_token(client):
     # Primero obtenemos un token real haciendo login
     login_resp = client.post(
         "/api/v1/auth/login",
-        json={"username": "empleado_admin", "password": "change_me"},
+        json={"username": "api_user", "password": "change_me"},
     )
     token = login_resp.json()["access_token"]
 
@@ -35,7 +35,7 @@ def test_protected_endpoint_requires_valid_token(client):
     )
 
     assert response.status_code == 200
-    assert response.json()["username"] == "empleado_admin"
+    assert response.json()["username"] == "api_user"
 
 
 def test_protected_endpoint_rejects_invalid_token(client):

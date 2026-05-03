@@ -18,7 +18,7 @@ def sample_input() -> TicketCreateInput:
         nombre="Ana",
         apellidos="García López",
         nif="12345678A",
-        telefono="600123456",
+        telefono="+34 600123456",
         email="ana@example.com",
         categoria=TicketCategory.movilidad,
         description="Hay un bache enorme en la Calle Mayor.",
