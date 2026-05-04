@@ -168,4 +168,5 @@ ruff format .
 
 ## Limitaciones intencionales
 
-Esta plantilla no intenta imponer una arquitectura cerrada. Es una base limpia para integrar equipos, estandarizar estructura y evolucionar el proyecto sin deuda temprana.
+Esta plantilla no intenta imponer una arquitectura cerrada. Es una base limpia para integrar equipos, estandarizar estructura y evolucionar el proyecto sin deuda temprana.# CiudadIA_V3
+Carga en Web de todo el desarrollo estratégico del aplicativo propuesto por el equipo Bootcamp 2026
